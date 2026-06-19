@@ -1,35 +1,59 @@
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+from datetime import datetime
+# ... (mantenha aqui todas as suas funções de conexão, helpers e load_...)
+
+st.set_page_config(page_title="Financeiro PJ/PF", page_icon="💼", layout="wide")
+
+st.markdown("## 💼 Financeiro PJ/PF")
+
+# DEFINIÇÃO DAS ABAS (deve vir antes dos blocos "with")
+aba_pj, aba_pf, aba_config = st.tabs(["🏢 Gestão PJ", "👤 Finanças PF", "⚙️ Configurações"])
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ABA PJ
+# ══════════════════════════════════════════════════════════════════════════════
+with aba_pj:
+    resumo, nfs_tab = st.tabs(["📈 Resumo", "📄 Notas Fiscais"])
+    with resumo:
+        st.write("Conteúdo do Resumo PJ...")
+    with nfs_tab:
+        st.write("Conteúdo das NFs...")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ABA PF
+# ══════════════════════════════════════════════════════════════════════════════
+with aba_pf:
+    orcamento, planos, reserva = st.tabs(["💰 Orçamento Mensal", "🎯 Planos", "🛡️ Reserva"])
+    with orcamento:
+        st.write("Distribuição do Fluxo...")
+    with planos:
+        st.write("Metas (FIES, Casa)...")
+    with reserva:
+        st.write("Reserva de emergência...")
+
 # ══════════════════════════════════════════════════════════════════════════════
 # ABA CONFIGURAÇÕES
 # ══════════════════════════════════════════════════════════════════════════════
 with aba_config:
-    st.subheader("⚙️ Configurações do Sistema")
+    st.subheader("⚙️ Configurações")
     cfg = load_config()
-
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("### 🏢 PJ")
         pro_labore = st.number_input("Pro-labore bruto (R$)", value=num(cfg.get("pro_labore","0")), step=100.0)
-        prev_privada = st.number_input("Previdência Privada (R$)", value=num(cfg.get("prev_privada","0")), step=50.0)
-        aliquota_das = st.slider("Alíquota DAS (%)", 1.0, 20.0, num(cfg.get("aliquota_simples","0,06"))*100, 0.1)
-        aliquota_darf = st.number_input("Alíquota DARF (%)", 0.0, 20.0, num(cfg.get("aliquota_darf","0,11"))*100, 0.1)
-        contador = st.number_input("Contador (R$)", value=num(cfg.get("contador","0")), step=50.0)
-
+        # ... (adicione os outros campos aqui)
+        
     with col2:
-        st.markdown("### 👤 PF (Planos)")
+        st.markdown("### 👤 PF")
         fies = st.number_input("FIES (R$)", value=num(cfg.get("fies","635,29")), step=10.0)
-        meta_invest = st.slider("Meta de Investimentos (% da entrada)", 5, 60, int(num(cfg.get("meta_investimento_pct","0,20"))*100), 5)
-        meta_casa = st.number_input("Meta Casa Própria (R$)", value=num(cfg.get("meta_casa_propria","4000")), step=100.0)
-
-    st.divider()
-    if st.button("💾 Salvar todas as configurações", type="primary", use_container_width=True):
+        # ... (adicione os outros campos aqui)
+        
+    if st.button("💾 Salvar todas as configurações", type="primary"):
         save_config("pro_labore", pro_labore)
-        save_config("prev_privada", prev_privada)
-        save_config("aliquota_simples", round(aliquota_das/100, 4))
-        save_config("aliquota_darf", round(aliquota_darf/100, 4))
-        save_config("contador", contador)
         save_config("fies", fies)
-        save_config("meta_investimento_pct", round(meta_invest/100, 2))
-        save_config("meta_casa_propria", meta_casa)
-        st.success("Configurações atualizadas com sucesso!")
+        st.success("Salvo!")
         st.rerun()
+        
