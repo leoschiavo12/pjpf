@@ -71,16 +71,20 @@ def _fmt(v):
     return str(round(float(v), 2)).replace('.', ',')
 
 def _num(s):
-    """converte string do Sheets para float"""
+    """converte string do Sheets para float — aceita vírgula ou ponto decimal"""
     try:
+        if s is None or str(s).strip() in ('', 'nan', 'None'):
+            return 0.0
         s = str(s).strip().replace('R$', '').replace(' ', '')
-        if ',' in s and '.' not in s:
-            s = s.replace(',', '.')
-        elif ',' in s and '.' in s:
+        # formato BR: 1.234,56
+        if ',' in s and '.' in s:
             if s.rindex(',') > s.rindex('.'):
                 s = s.replace('.', '').replace(',', '.')
             else:
                 s = s.replace(',', '')
+        # só vírgula: 0,06 → 0.06
+        elif ',' in s:
+            s = s.replace(',', '.')
         return float(s)
     except:
         return 0.0
