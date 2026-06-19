@@ -5,66 +5,106 @@ from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 1. FUNÇÕES DE SUPORTE E CONEXÃO (Devem vir antes do uso)
-# ══════════════════════════════════════════════════════════════════════════════
+st.set_page_config(page_title="Financeiro PJ/PF", page_icon="💼", layout="wide")
 
-# [Cole aqui as suas funções get_svc, ler, append, update, delete_row]
-# [Cole aqui as suas funções helpers: num, fmt, brl, mes_label]
+# Estilo para esconder o menu lateral
+st.markdown("""
+    <style>
+        [data-testid="stSidebarNav"] { display: none; }
+        .block-container { padding-top: 2rem; }
+    </style>
+""", unsafe_allow_html=True)
 
+# ── Conexão Google Sheets ─────────────────────────────────────────────────────
+SHEET_ID = st.secrets["google_sheets"]["spreadsheet_id"]
+
+def get_svc():
+    creds = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
+    return build("sheets", "v4", credentials=creds).spreadsheets()
+
+def ler(tab, colunas):
+    try:
+        n = len(colunas)
+        col_fim = chr(ord('A') + n - 1)
+        res = get_svc().values().get(spreadsheetId=SHEET_ID, range=f"{tab}!A:{col_fim}").execute()
+        rows = res.get("values", [])
+        if len(rows) <= 1: return pd.DataFrame(columns=colunas)
+        padded = [(r + ['']*n)[:n] for r in rows[1:]]
+        return pd.DataFrame(padded, columns=colunas)
+    except: return pd.DataFrame(columns=colunas)
+
+def append(tab, row):
+    get_svc().values().append(spreadsheetId=SHEET_ID, range=f"{tab}!A:A",
+        valueInputOption="USER_ENTERED", body={"values": [row]}).execute()
+
+def update(tab, linha, row):
+    col_fim = chr(ord('A') + len(row) - 1)
+    get_svc().values().update(spreadsheetId=SHEET_ID, range=f"{tab}!A{linha}:{col_fim}{linha}",
+        valueInputOption="USER_ENTERED", body={"values": [row]}).execute()
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def num(s):
+    try:
+        s = str(s).strip().replace('R$','').replace(' ','')
+        s = s.replace('.','').replace(',','.') if ',' in s and '.' in s else s.replace(',','.')
+        return float(s)
+    except: return 0.0
+
+def fmt(v): return str(round(float(v), 2)).replace('.', ',')
+
+# ── Funções de Carga ──────────────────────────────────────────────────────────
 def load_config():
-    # Exemplo simples, ajuste conforme sua implementação original
     df = ler("config", ["chave","valor"])
     return {r["chave"]: r["valor"] for _, r in df.iterrows()}
 
 def save_config(key, value):
     df = ler("config", ["chave","valor"])
-    # [Lógica de save_config original]
+    for i, r in df.iterrows():
+        if r["chave"] == key:
+            update("config", i+2, [key, fmt(value) if isinstance(value, float) else str(value)])
+            return
+    append("config", [key, fmt(value) if isinstance(value, float) else str(value)])
 
-# [Cole aqui as funções load_nfs, load_custos_pj, load_fluxo_pj, load_fluxo_pf, etc.]
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 2. CONFIGURAÇÃO E ABAS
-# ══════════════════════════════════════════════════════════════════════════════
-
-st.set_page_config(page_title="Financeiro PJ/PF", page_icon="💼", layout="wide")
+# ── Interface Principal ───────────────────────────────────────────────────────
 st.markdown("## 💼 Financeiro PJ/PF")
-
 aba_pj, aba_pf, aba_config = st.tabs(["🏢 Gestão PJ", "👤 Finanças PF", "⚙️ Configurações"])
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 3. CONTEÚDO DAS ABAS
-# ══════════════════════════════════════════════════════════════════════════════
-
 with aba_pj:
-    resumo, nfs_tab = st.tabs(["📈 Resumo", "📄 Notas Fiscais"])
-    with resumo:
-        st.write("Conteúdo do Resumo...")
-    with nfs_tab:
-        st.write("Conteúdo das NFs...")
+    st.subheader("🏢 Gestão PJ")
+    st.write("Funcionalidades da PJ aqui...")
 
 with aba_pf:
-    orcamento, planos, reserva = st.tabs(["💰 Orçamento Mensal", "🎯 Planos", "🛡️ Reserva"])
-    with orcamento:
-        st.write("Orçamento...")
-    with planos:
-        st.write("Planos...")
-    with reserva:
-        st.write("Reserva...")
+    st.subheader("👤 Finanças PF")
+    st.write("Funcionalidades da PF aqui...")
 
 with aba_config:
     st.subheader("⚙️ Configurações do Sistema")
-    cfg = load_config() # Agora a função já foi lida pelo Python!
-
+    cfg = load_config()
+    
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("### 🏢 PJ")
-        pro_labore = st.number_input("Pro-labore bruto (R$)", value=float(num(cfg.get("pro_labore","0"))), step=100.0)
-        # ... (adicione seus outros inputs aqui)
+        pro_labore_c = st.number_input("Pro-labore (R$)", value=num(cfg.get("pro_labore","0")), step=100.0)
+        prev_c = st.number_input("Previdência (R$)", value=num(cfg.get("prev_privada","0")), step=50.0)
+        aliq_c = st.slider("Alíquota DAS (%)", 1.0, 20.0, num(cfg.get("aliquota_simples","0,06"))*100, 0.1)
+        cont_c = st.number_input("Contador (R$)", value=num(cfg.get("contador","0")), step=50.0)
+
     with col2:
         st.markdown("### 👤 PF")
-        fies = st.number_input("FIES (R$)", value=float(num(cfg.get("fies","635,29"))), step=10.0)
-        # ... (adicione seus outros inputs aqui)
+        fies_c = st.number_input("FIES (R$)", value=num(cfg.get("fies","635,29")), step=10.0)
+        meta_inv_c = st.slider("Investimento (%)", 5, 60, int(num(cfg.get("meta_investimento_pct","0,20"))*100), 5)
+        casa_c = st.number_input("Casa Própria (R$)", value=num(cfg.get("meta_casa_propria","4000")), step=100.0)
 
-    if st.button("💾 Salvar configurações", type="primary"):
-        save_config("pro_
+    if st.button("💾 Salvar todas as configurações", type="primary", use_container_width=True):
+        save_config("pro_labore", pro_labore_c)
+        save_config("prev_privada", prev_c)
+        save_config("aliquota_simples", round(aliq_c/100, 4))
+        save_config("contador", cont_c)
+        save_config("fies", fies_c)
+        save_config("meta_investimento_pct", round(meta_inv_c/100, 2))
+        save_config("meta_casa_propria", casa_c)
+        st.success("Salvo com sucesso!")
+        st.rerun()
