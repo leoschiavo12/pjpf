@@ -7,7 +7,6 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Financeiro PJ/PF", page_icon="💼", layout="wide")
 
-# Estilo para esconder menu lateral
 st.markdown("""
     <style>
         [data-testid="stSidebarNav"] { display: none; }
@@ -29,7 +28,7 @@ def ler(tab, colunas):
     try:
         n = len(colunas)
         col_fim = chr(ord('A') + n - 1)
-        res = get_svc().values().get(spreadsheetId=SHEET_ID, range=f"{tab}!A:{col_fim}").execute()
+        res  = get_svc().values().get(spreadsheetId=SHEET_ID, range=f"{tab}!A:{col_fim}").execute()
         rows = res.get("values", [])
         if len(rows) <= 1: return pd.DataFrame(columns=colunas)
         padded = [(r + ['']*n)[:n] for r in rows[1:]]
@@ -83,27 +82,29 @@ with aba_pf:
 with aba_config:
     st.subheader("⚙️ Configurações do Sistema")
     cfg = load_config()
-    st.caption("Digite os valores abaixo manualmente para salvar.")
+    st.caption("Digite os valores abaixo manualmente.")
     
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("### 🏢 PJ")
-        pro_labore_c = st.number_input("Pro-labore (R$)", value=num(cfg.get("pro_labore","0")), step=100.0, format="%.2f")
-        prev_c       = st.number_input("Previdência (R$)", value=num(cfg.get("prev_privada","0")), step=50.0, format="%.2f")
-        aliquota_c   = st.number_input("Alíquota DAS (%)", value=num(cfg.get("aliquota_simples","0,06"))*100, step=0.1, format="%.2f")
-        contador_c   = st.number_input("Contador (R$)", value=num(cfg.get("contador","0")), step=50.0, format="%.2f")
+        pro_labore_c = st.number_input("Pro-labore (R$)", value=num(cfg.get("pro_labore","0")), step=None, format="%.2f")
+        prev_c       = st.number_input("Previdência (R$)", value=num(cfg.get("prev_privada","0")), step=None, format="%.2f")
+        aliq_c       = st.number_input("Alíquota DAS (%)", value=num(cfg.get("aliquota_simples","0,06"))*100, step=None, format="%.2f")
+        contador_c   = st.number_input("Contador (R$)", value=num(cfg.get("contador","0")), step=None, format="%.2f")
 
     with col2:
         st.markdown("### 👤 PF (Planos)")
-        fies_c       = st.number_input("FIES (R$)", value=num(cfg.get("fies","635,29")), step=10.0, format="%.2f")
-        meta_inv_c   = st.number_input("Meta de Investimento (%)", value=num(cfg.get("meta_investimento_pct","0,20"))*100, step=1.0, format="%.2f")
-        meta_casa_c  = st.number_input("Meta Casa Própria (R$)", value=num(cfg.get("meta_casa_propria","4000")), step=100.0, format="%.2f")
+        fies_c       = st.number_input("FIES (R$)", value=num(cfg.get("fies","635,29")), step=None, format="%.2f")
+        meta_inv_c   = st.number_input("Meta de Investimento (%)", value=num(cfg.get("meta_investimento_pct","0,20"))*100, step=None, format="%.2f")
+        meta_casa_c  = st.number_input("Casa Própria (R$)", value=num(cfg.get("meta_casa_propria","4000")), step=None, format="%.2f")
 
-    st.divider()
     if st.button("💾 Salvar todas as configurações", type="primary", use_container_width=True):
         save_config("pro_labore", pro_labore_c)
         save_config("prev_privada", prev_c)
-        save_config("aliquota_simples", round(aliquota_c/100, 4))
+        save_config("aliquota_simples", round(aliq_c/100, 4))
         save_config("contador", contador_c)
         save_config("fies", fies_c)
         save_config("meta_investimento_pct", round(meta_inv_c/100, 2))
+        save_config("meta_casa_propria", meta_casa_c)
+        st.success("Configurações salvas!")
+        st.rerun()
