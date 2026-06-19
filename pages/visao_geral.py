@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils.sheets import load_config, load_nfs, load_custos_pj, load_fluxo_pf
+from utils.sheets import load_config, load_nfs, load_custos_pj, load_fluxo_pf, _num
 from utils.formatters import brl, mes_label
 
 
@@ -13,19 +13,16 @@ def render():
     mes_atual = hoje.strftime("%Y-%m")
     mes_anterior = (hoje.replace(day=1) - pd.Timedelta(days=1)).strftime("%Y-%m")
 
-    # ── Cards de configurações rápidas ────────────────────────────────────────
     with st.expander("⚙️ Parâmetros ativos", expanded=False):
         col1, col2, col3 = st.columns(3)
-        col1.metric("Pro-labore bruto", brl(float(cfg.get("pro_labore", 0))))
-        col1.metric("Pro-labore líquido", brl(float(cfg.get("pro_labore_liquido", 1513))))
-        col2.metric("Prev. Privada", brl(float(cfg.get("prev_privada", 0))))
-        col2.metric("Contador", brl(float(cfg.get("contador", 0))))
-        col3.metric("FIES", brl(float(cfg.get("fies", 635.29))))
-        col3.metric("Alíquota Simples", f"{float(cfg.get('aliquota_simples', 0.06))*100:.1f}%")
+        col1.metric("Pro-labore bruto", brl(_num(cfg.get("pro_labore", "0"))))
+        col1.metric("Pro-labore líquido", brl(_num(cfg.get("pro_labore_liquido", "1513"))))
+        col2.metric("Prev. Privada", brl(_num(cfg.get("prev_privada", "0"))))
+        col2.metric("Contador", brl(_num(cfg.get("contador", "0"))))
+        col3.metric("FIES", brl(_num(cfg.get("fies", "635,29"))))
+        col3.metric("Alíquota Simples", f"{_num(cfg.get('aliquota_simples', '0,06'))*100:.1f}%")
 
     st.divider()
-
-    # ── Status do mês atual ───────────────────────────────────────────────────
     st.subheader(f"📅 {mes_label(mes_atual)} — mês atual")
 
     nfs = load_nfs()
@@ -36,10 +33,8 @@ def render():
 
     col1, col2, col3 = st.columns(3)
     total_emitido = nfs_mes["valor"].sum() if not nfs_mes.empty else 0
-    col1.metric("NFs emitidas no mês", brl(total_emitido),
-                help="Soma das NFs cuja competência é este mês")
-    col2.metric("NFs a faturar este mês", len(nfs_faturar),
-                help="NFs com faturamento previsto para este mês ainda pendentes")
+    col1.metric("NFs emitidas no mês", brl(total_emitido))
+    col2.metric("NFs a faturar este mês", len(nfs_faturar))
 
     custos = load_custos_pj()
     fechamento_mes = custos[custos["mes_ref"] == mes_atual] if not custos.empty else pd.DataFrame()
@@ -49,8 +44,6 @@ def render():
         col3.metric("Saldo PJ", "—", help="Mês ainda não fechado")
 
     st.divider()
-
-    # ── Resumo do mês anterior ────────────────────────────────────────────────
     st.subheader(f"📋 {mes_label(mes_anterior)} — fechamento")
 
     custos_ant = custos[custos["mes_ref"] == mes_anterior] if not custos.empty else pd.DataFrame()
@@ -77,8 +70,6 @@ def render():
         col4.metric("Saldo livre", brl(float(p["saldo_livre"])))
 
     st.divider()
-
-    # ── NFs emitidas recentes ─────────────────────────────────────────────────
     st.subheader("📄 Últimas NFs registradas")
     if not nfs.empty:
         df_show = nfs.sort_values("criado_em", ascending=False).head(5)[
