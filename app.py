@@ -17,7 +17,7 @@ st.set_page_config(
 # ──────────────────────────────────────────────
 # CONSTANTES
 # ──────────────────────────────────────────────
-SHEET_ID = "SEU_SPREADSHEET_ID_AQUI"  # <- substituir pelo ID real
+SHEET_ID = "1ZP8Qa7pfptri7NByWEcJHPXp1xA4fD3r_Pk7BHH17cA"  # <- substituir pelo ID real
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
